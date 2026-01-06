@@ -1,0 +1,79 @@
+pipeline {
+    agent any
+    parameters {
+        // DockerHub 사용자명 입력
+        string(name: 'DOCKERHUB_USERNAME',  defaultValue: 'academyitwill', description: 'DockerHub 사용자명을 입력하세요.')
+        // GitHub  사용자명 입력
+        string(name: 'GITHUB_USERNAME',  defaultValue: '2025-01-JAVA-DEVELOPER-159', description: 'GitHub  사용자명을 입력하세요.')
+    }			
+    environment {
+        // 본인의 username으로 하실 분은 수정해주세요.
+        GITHUB_URL = 'https://github.com/2025-01-JAVA-DEVELOPER-159/kubernetes-guest-script.git'
+        // 실습 넘버링
+         STEP_NUM = 'step23'
+    }
+
+    stages {
+        stage('릴리즈파일 체크아웃') {
+            steps {
+                checkout scmGit(branches: [[name: '*/main']],
+                        extensions: [[$class: 'SparseCheckoutPaths',
+                                      sparseCheckoutPaths: [[path: "/${STEP_NUM}"]]]],
+                        userRemoteConfigs: [[url: "${GITHUB_URL}"]])
+            }
+        }
+
+        stage('쿠버네티스 Blue배포') {
+            steps {
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/blue/namespace.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/blue/configmap.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/blue/secret.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/blue/service.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/blue/deployment.yaml"
+            }
+        }
+
+        stage('배포 시작') {
+            steps {
+                input message: '수동배포 시작', ok: "Yes"
+            }
+        }
+
+        stage('쿠버네티스 Green배포') {
+            steps {
+	        sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/green/deployment.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/green/service.yaml"
+            }
+        }
+
+        stage('전환여부 확인') {
+            steps {
+                script {
+                    returnValue = input message: 'Green 전환?', ok: "Yes", parameters: [booleanParam(defaultValue: true, name: 'IS_SWITCHED')]
+                    if (returnValue) {
+                        sh "kubectl patch -n guest-namespace-step2 svc guest-service -p '{\"spec\": {\"selector\": {\"blue-green-no\": \"2\"}}}'"
+                    }
+                }
+            }
+        }
+
+        stage('롤백 확인') {
+            steps {
+                script {
+                    returnValue = input message: 'Blue 롤백?', parameters: [choice(choices: ['done', 'rollback'], name: 'IS_ROLLBACk')]
+                    if (returnValue == "done") {
+                        sh "kubectl delete -f ./${STEP_NUM}/deploy/k8s/blue/deployment.yaml"
+                        sh "kubectl delete -f ./${STEP_NUM}/deploy/k8s/green/service.yaml"
+                        sh "kubectl patch -n guest-namespace-step2 svc guest-service -p '{\"metadata\": {\"labels\": {\"version\": \"2.0.0\"}}}'"
+                        sh "kubectl patch -n guest-namespace-step2 cm guest-configmap -p '{\"metadata\": {\"labels\": {\"version\": \"2.0.0\"}}}'"
+                        sh "kubectl patch -n guest-namespace-step2 secret guest-secret -p '{\"metadata\": {\"labels\": {\"version\": \"2.0.0\"}}}'"
+                    }
+                    if (returnValue == "rollback") {
+                        sh "kubectl patch -n guest-namespace-step2 svc guest-service -p '{\"spec\": {\"selector\": {\"blue-green-no\": \"1\"}}}'"
+                    }
+                }
+            }
+        }
+    }
+
+}
