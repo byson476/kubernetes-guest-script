@@ -31,10 +31,10 @@ spec:
       containers:
         - name: guest-container
           image: academyitwill/guest:latest
-          #imagePullPolicy: Always
+          imagePullPolicy: Always
           env:
-          - name: USER_PROFILE
-            value: remote-oracle 
+          - name: SPRING_PROFILES_ACTIVE
+            value: mysql-dev-group
           ports:
             - containerPort: 80
               name: http
