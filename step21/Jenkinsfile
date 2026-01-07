@@ -14,7 +14,7 @@ pipeline {
          // ===== Git Repositories =====
         GITHUB_SCRIPT_URL = "https://github.com/${GITHUB_USERNAME}/kubernetes-guest-script.git"
         GITHUB_SOURCE_URL = "https://github.com/${GITHUB_USERNAME}/kubernetes-guest-source.git"
-        CLASS_NUM = "step21"
+        STEP_NUM = "step21"
     }
 
     stages {
