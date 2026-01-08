@@ -40,10 +40,9 @@ pipeline {
                     userRemoteConfigs: [[url: "${GITHUB_SCRIPT_URL}"]])
 
                 // jar 파일 복사
-                sh "cp ./build/libs/guest.jar ./${STEP_NUM}/build/docker/app.jar"
-
+                sh "cp ./build/libs/app.jar ./${STEP_NUM}/build/docker/app.jar"
                 // 컨테이너 빌드 및 업로드
-                sh "docker build -t ${DOCKERHUB_USERNAME}/guest ./${STEP_NUM}/build/docker"
+                sh "docker build -t ${DOCKERHUB_USERNAME}/guest:v1 ./${STEP_NUM}/build/docker"
                 script{
                     if (DOCKERHUB_USERNAME == "academyitwill") {
                         sh "docker push ${DOCKERHUB_USERNAME}/guest:v1"
