@@ -1,9 +1,9 @@
-FROM openjdk:21-jdk
-COPY ./app.jar /usr/src/myapp/app.jar
+FROM eclipse-temurin:21-jre
+WORKDIR /app
+COPY ./app.jar /app/app.jar
 
-# 환경변수 선언
-ENV USER_PROFILE=remote-oracle
-ENTRYPOINT ["java"]
-CMD ["-jar", "-Dspring.profiles.active=${USER_PROFILE}","app.jar"]
-EXPOSE 80
-WORKDIR /usr/src/myapp
+# 기본값(필요하면 런타임에 덮어씀)
+ENV SPRING_PROFILES_ACTIVE=mysql-dev-group
+EXPOSE 8080
+
+ENTRYPOINT ["sh","-c","java -Dspring.profiles.active=${SPRING_PROFILES_ACTIVE} -jar /app/app.jar"]

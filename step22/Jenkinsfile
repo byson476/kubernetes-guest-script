@@ -8,14 +8,13 @@ pipeline {
         // DockerHub 사용자명 입력
         string(name: 'DOCKERHUB_USERNAME',  defaultValue: 'academyitwill', description: 'DockerHub 사용자명을 입력하세요.')
         // GitHub  사용자명 입력
-        string(name: 'GITHUB_USERNAME',  defaultValue: '2025-01-JAVA-DEVELOPER-159', description: 'GitHub  사용자명을 입력하세요.')
+        string(name: 'GITHUB_USERNAME',  defaultValue: '2025-07-JAVA-DEVELOPER-162', description: 'GitHub  사용자명을 입력하세요.')
     }	
     environment {
-        // 본인의 username으로 하실 분은 수정해주세요.
-        //DOCKERHUB_USERNAME = 'academyitwill'
-        GITHUB_URL = 'https://github.com/2025-01-JAVA-DEVELOPER-159/kubernetes-guest-script.git'
-        // deployment.yaml -> image: academyitwill/guest
-         // 실습 step 번호 - (수정x)
+        GITHUB_SCRIPT_URL = "https://github.com/${GITHUB_USERNAME}/kubernetes-guest-script.git"
+        GITHUB_SOURCE_URL = "https://github.com/${GITHUB_USERNAME}/kubernetes-guest-source.git"
+        //deployment.yaml -> image: academyitwill/guest:v1
+        //실습 step 번호 - (수정x)
         STEP_NUM = 'step22'
     }
 
@@ -23,7 +22,7 @@ pipeline {
         stage('Source Build') {
             steps {
                 // 소스파일 체크아웃
-                git branch: 'main', url: 'https://github.com/2025-01-JAVA-DEVELOPER-159/kubernetes-guest-source.git'
+                git branch: 'main', url: "${GITHUB_SOURCE_URL}"
 
                 // 소스 빌드
                 // 755권한 필요 (윈도우에서 Git으로 소스 업로드시 권한은 644)
@@ -38,7 +37,7 @@ pipeline {
                 checkout scmGit(branches: [[name: '*/main']], 
                     extensions: [[$class: 'SparseCheckoutPaths', 
                     sparseCheckoutPaths: [[path: "/${STEP_NUM}"]]]], 
-                    userRemoteConfigs: [[url: "${GITHUB_URL}"]])
+                    userRemoteConfigs: [[url: "${GITHUB_SCRIPT_URL}"]])
 
                 // jar 파일 복사
                 sh "cp ./build/libs/guest.jar ./${STEP_NUM}/build/docker/app.jar"
@@ -47,9 +46,9 @@ pipeline {
                 sh "docker build -t ${DOCKERHUB_USERNAME}/guest ./${STEP_NUM}/build/docker"
                 script{
                     if (DOCKERHUB_USERNAME == "academyitwill") {
-                        sh "docker push ${DOCKERHUB_USERNAME}/guest"
+                        sh "docker push ${DOCKERHUB_USERNAME}/guest:v1"
                     } else {
-                        sh "docker push ${DOCKERHUB_USERNAME}/guest"
+                        sh "docker push ${DOCKERHUB_USERNAME}/guest:v1"
                     }
                 }
             }
@@ -59,11 +58,11 @@ pipeline {
             steps {
                 // 쿠버네티스 배포 
                 sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/namespace.yaml"
-		sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/configmap.yaml"
-		sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/secret.yaml"
-		sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/deployment.yaml"
-		sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/service.yaml"
-		sh "kubectl rollout restart deployment guest-deployment -n guest-namespace-step2"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/configmap.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/secret.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/deployment.yaml"
+                sh "kubectl apply -f ./${STEP_NUM}/deploy/k8s/service.yaml"
+                sh "kubectl rollout restart deployment guest-deployment -n guest-namespace-step2"
             }
         }
     }
